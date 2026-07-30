@@ -25,6 +25,7 @@ const CreditorsPage = () => {
     status,
     ledgerStatus,
     pagination,
+    ledgerPagination,
   } = useSelector((state: RootState) => state.creditors);
   const { user } = useSelector((state: RootState) => state.auth);
 
@@ -32,6 +33,17 @@ const CreditorsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
+
+  // Ledger view pagination state
+  const [ledgerCreditorId, setLedgerCreditorId] = useState<number | null>(null);
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const [ledgerPerPage, setLedgerPerPage] = useState(10);
+
+  useEffect(() => {
+    if (ledgerCreditorId) {
+      dispatch(fetchLedger({ creditorId: ledgerCreditorId, page: ledgerPage, per_page: ledgerPerPage }));
+    }
+  }, [dispatch, ledgerCreditorId, ledgerPage, ledgerPerPage]);
 
   const [isCreditorModalOpen, setIsCreditorModalOpen] = useState(false);
   const [editingCreditor, setEditingCreditor] = useState<Creditor | null>(null);
@@ -124,6 +136,7 @@ const CreditorsPage = () => {
               toast.dismiss(t.id);
               try {
                 await dispatch(deleteTransaction({ creditorId, transactionId: txnId })).unwrap();
+                setLedgerPage(1);
                 toast.success('Transaction deleted from ledger');
               } catch (e: any) {
                 toast.error(e || 'Failed to delete transaction');
@@ -180,7 +193,7 @@ const CreditorsPage = () => {
             <header className="mb-10 animate-fade flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
                 <button
-                  onClick={() => dispatch(clearSelectedLedger())}
+                  onClick={() => { dispatch(clearSelectedLedger()); setLedgerCreditorId(null); setLedgerPage(1); }}
                   className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors group"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -315,7 +328,7 @@ const CreditorsPage = () => {
             <div className="bg-white p-4 md:p-8 rounded-[2rem] shadow-sm border border-slate-100 animate-fade">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-black text-slate-800">Ledger Statement</h3>
-                <span className="text-xs font-bold text-slate-400">Chronological Order</span>
+                <span className="text-xs font-bold text-slate-400">Newest First</span>
               </div>
 
               {ledgerStatus === 'loading' ? (
@@ -437,6 +450,60 @@ const CreditorsPage = () => {
                   </table>
                 </div>
               )}
+
+              {/* Ledger Pagination Controls */}
+              {ledgerPagination && ledgerPagination.total > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-8 border-t border-slate-100">
+                  <div className="text-xs font-bold text-slate-500">
+                    Showing <span className="text-slate-800">{Math.min(ledgerPagination.total, (ledgerPage - 1) * ledgerPerPage + 1)}</span> to{' '}
+                    <span className="text-slate-800">{Math.min(ledgerPagination.total, ledgerPage * ledgerPerPage)}</span> of{' '}
+                    <span className="text-slate-800">{ledgerPagination.total}</span> entries
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-400">Show:</span>
+                      <select
+                        value={ledgerPerPage}
+                        onChange={(e) => { setLedgerPerPage(Number(e.target.value)); setLedgerPage(1); }}
+                        className="px-2 py-1 bg-slate-50 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 outline-none focus:border-blue-500"
+                      >
+                        {[10, 25, 50, 100].map((size) => (
+                          <option key={size} value={size}>{size}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setLedgerPage((p) => Math.max(1, p - 1))}
+                        disabled={ledgerPage === 1}
+                        className="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
+                      </button>
+                      {Array.from({ length: ledgerPagination.last_page }, (_, i) => i + 1).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setLedgerPage(p)}
+                          className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all ${
+                            ledgerPage === p
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setLedgerPage((p) => Math.min(ledgerPagination.last_page, p + 1))}
+                        disabled={ledgerPage === ledgerPagination.last_page}
+                        className="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -455,6 +522,7 @@ const CreditorsPage = () => {
           onClose={() => {
             setIsTxnModalOpen(false);
             setEditingTxn(null);
+            setLedgerPage(1);
           }}
           creditorId={selectedCreditor.id}
           initialData={editingTxn}
@@ -564,7 +632,7 @@ const CreditorsPage = () => {
                             {(page - 1) * perPage + index + 1}
                           </div>
                           <div>
-                            <span className="group-hover:text-blue-600 transition-colors cursor-pointer block" onClick={() => dispatch(fetchLedger(creditor.id))}>
+                            <span className="group-hover:text-blue-600 transition-colors cursor-pointer block" onClick={() => { setLedgerPage(1); setLedgerCreditorId(creditor.id); }}>
                               {creditor.name}
                             </span>
                           </div>
@@ -611,7 +679,7 @@ const CreditorsPage = () => {
                           </button>
 
                           <button
-                            onClick={() => dispatch(fetchLedger(creditor.id))}
+                            onClick={() => { setLedgerPage(1); setLedgerCreditorId(creditor.id); }}
                             className="px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-colors text-xs font-black uppercase tracking-wider flex items-center gap-1.5"
                             title="View Ledger Statement"
                           >

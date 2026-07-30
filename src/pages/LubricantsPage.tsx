@@ -357,7 +357,14 @@ const LubricantsPage = () => {
                     <React.Fragment key={dailySale.id}>
                       <tr className="bg-slate-50 border-b border-slate-100">
                         <td colSpan={4} className="py-3 pl-4 text-sm font-black text-blue-600 tracking-wider uppercase">
-                          {dailySale.date ? new Date(dailySale.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                          {(() => {
+                            if (!dailySale.date) return '-';
+                            const [day, month, year] = dailySale.date.split('/');
+                            const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+                            return isNaN(parsed.getTime())
+                              ? '-'
+                              : parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                          })()}
                         </td>
                       </tr>
                       {dailySale.lubricants?.map((sale: any) => (

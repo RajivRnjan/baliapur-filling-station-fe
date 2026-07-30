@@ -757,7 +757,14 @@ const Dashboard = () => {
   const [perPage, setPerPage] = useState(31);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [statsDate, setStatsDate] = useState('');
+  const getTodayLocalDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const [statsDate, setStatsDate] = useState(getTodayLocalDate());
 
   // Format date helper: yyyy-mm-dd to dd/mm/yyyy
   const formatDateForApi = (dateStr: string) => {

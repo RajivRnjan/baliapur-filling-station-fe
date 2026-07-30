@@ -53,7 +53,7 @@ const AdminFormModal: React.FC<AdminFormModalProps> = ({ isOpen, onClose, admin 
         const updateData: any = { name, email, role, phone, salary: Number(salary) || 0 };
         if (password.trim()) updateData.password = password;
         await dispatch(updateAdmin({ id: admin.id, data: updateData })).unwrap();
-        toast.success('Admin updated successfully');
+        toast.success(`${role === 'STAFF' ? 'Staff' : 'Admin'} updated successfully`);
       } else {
         await dispatch(addAdmin({
           name,
@@ -63,7 +63,7 @@ const AdminFormModal: React.FC<AdminFormModalProps> = ({ isOpen, onClose, admin 
           phone,
           salary: Number(salary) || 0
         })).unwrap();
-        toast.success('Admin created successfully');
+        toast.success(`${role === 'STAFF' ? 'Staff' : 'Admin'} created successfully`);
       }
       onClose();
       setName('');

@@ -35,6 +35,12 @@ interface CreditorState {
     per_page: number;
     last_page: number;
   };
+  ledgerPagination: {
+    current_page: number;
+    total: number;
+    per_page: number;
+    last_page: number;
+  };
 }
 
 const initialState: CreditorState = {
@@ -45,6 +51,12 @@ const initialState: CreditorState = {
   ledgerStatus: 'idle',
   error: null,
   pagination: {
+    current_page: 1,
+    total: 0,
+    per_page: 10,
+    last_page: 1,
+  },
+  ledgerPagination: {
     current_page: 1,
     total: 0,
     per_page: 10,
@@ -105,12 +117,26 @@ export const deleteCreditor = createAsyncThunk(
 
 export const fetchLedger = createAsyncThunk(
   'creditors/fetchLedger',
-  async (creditorId: number, { rejectWithValue }) => {
+  async (
+    params: number | { creditorId: number; page?: number; per_page?: number },
+    { rejectWithValue }
+  ) => {
+    const { creditorId, page, per_page } =
+      typeof params === 'number' ? { creditorId: params, page: undefined, per_page: undefined } : params;
     try {
-      const response = await api.get(`/creditors/${creditorId}/ledger`);
+      const response = await api.get(`/creditors/${creditorId}/ledger`, {
+        params: { page, per_page },
+      });
+      const ledger = response.data.ledger;
       return {
         creditor: response.data.creditor,
-        ledger: response.data.ledger || [],
+        ledger: ledger?.data || ledger || [],
+        pagination: {
+          current_page: ledger?.current_page || 1,
+          total: ledger?.total ?? (Array.isArray(ledger) ? ledger.length : 0),
+          per_page: ledger?.per_page || 10,
+          last_page: ledger?.last_page || 1,
+        },
       };
     } catch (err: any) {
       return rejectWithValue(err.message || 'Failed to fetch ledger');
@@ -190,6 +216,7 @@ const creditorSlice = createSlice({
       state.selectedCreditor = null;
       state.selectedLedger = [];
       state.ledgerStatus = 'idle';
+      state.ledgerPagination = initialState.ledgerPagination;
     },
   },
   extraReducers: (builder) => {
@@ -248,10 +275,11 @@ const creditorSlice = createSlice({
       .addCase(fetchLedger.pending, (state) => {
         state.ledgerStatus = 'loading';
       })
-      .addCase(fetchLedger.fulfilled, (state, action: PayloadAction<{ creditor: Creditor; ledger: LedgerTransaction[] }>) => {
+      .addCase(fetchLedger.fulfilled, (state, action: PayloadAction<{ creditor: Creditor; ledger: LedgerTransaction[]; pagination: CreditorState['ledgerPagination'] }>) => {
         state.ledgerStatus = 'succeeded';
         state.selectedCreditor = action.payload.creditor;
         state.selectedLedger = action.payload.ledger;
+        state.ledgerPagination = action.payload.pagination;
       })
       .addCase(fetchLedger.rejected, (state, action) => {
         state.ledgerStatus = 'failed';

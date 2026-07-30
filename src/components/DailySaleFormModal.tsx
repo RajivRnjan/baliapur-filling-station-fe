@@ -78,6 +78,8 @@ const DailySaleFormModal: React.FC<DailySaleFormModalProps> = ({ isOpen, onClose
   const { items: allCreditors = [] } = useSelector((state: RootState) => state.creditors);
 
   // Admin/Staff States
+  const { user } = useSelector((state: RootState) => state.auth);
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const { items: allAdmins = [] } = useSelector((state: RootState) => state.admins);
   const staffMembers = allAdmins.filter(a => a.role === 'STAFF');
 
@@ -87,7 +89,9 @@ const DailySaleFormModal: React.FC<DailySaleFormModalProps> = ({ isOpen, onClose
     if (isOpen) {
       dispatch(fetchLubricants({ per_page: 100 }));
       dispatch(fetchCreditors({ per_page: 100 }));
-      dispatch(fetchAdmins());
+      if (isSuperAdmin) {
+        dispatch(fetchAdmins());
+      }
       if (editingSaleId) {
         loadExistingSale(editingSaleId);
       } else {

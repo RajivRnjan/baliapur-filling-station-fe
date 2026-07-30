@@ -197,7 +197,8 @@ const PurchasesPage = () => {
                   />
                 </div>
 
-                <div className="flex items-end justify-start">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 invisible">Reset</label>
                   <button
                     onClick={() => {
                       setIsOpening('');
@@ -206,7 +207,7 @@ const PurchasesPage = () => {
                       setSearchTerm('');
                       setPage(1);
                     }}
-                    className="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 rounded-xl text-xs font-black transition-colors w-full"
+                    className="w-full px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white border border-slate-800 rounded-xl text-xs font-black transition-colors"
                   >
                     Reset Filters
                   </button>
