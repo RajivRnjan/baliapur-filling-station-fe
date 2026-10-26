@@ -24,10 +24,15 @@ const DateRangeDropdown: React.FC<DateRangeDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  const parseLocalDate = (d: string | null) => {
+    if (!d) return new Date();
+    return new Date(d.replace(/-/g, '/'));
+  };
+
   const [state, setState] = useState<Range[]>([
     {
-      startDate: startDate ? new Date(startDate) : new Date(),
-      endDate: endDate ? new Date(endDate) : new Date(),
+      startDate: parseLocalDate(startDate),
+      endDate: parseLocalDate(endDate),
       key: 'selection'
     }
   ]);
@@ -36,8 +41,8 @@ const DateRangeDropdown: React.FC<DateRangeDropdownProps> = ({
     if (startDate && endDate) {
       setState([
         {
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
+          startDate: parseLocalDate(startDate),
+          endDate: parseLocalDate(endDate),
           key: 'selection'
         }
       ]);
@@ -76,7 +81,7 @@ const DateRangeDropdown: React.FC<DateRangeDropdownProps> = ({
   };
 
   const displayText = startDate && endDate 
-    ? `${format(new Date(startDate), 'dd/MM/yyyy')} - ${format(new Date(endDate), 'dd/MM/yyyy')}`
+    ? `${format(parseLocalDate(startDate), 'dd/MM/yyyy')} - ${format(parseLocalDate(endDate), 'dd/MM/yyyy')}`
     : '';
 
   return (

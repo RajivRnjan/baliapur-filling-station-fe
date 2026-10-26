@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../store';
 import { fetchDailySales, deleteDailySale } from '../features/dailySales/dailySalesSlice';
@@ -34,6 +34,24 @@ const DailySalesPage: React.FC = () => {
   const [presetRange, setPresetRange] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Indian Financial Year: April 1 to March 31 (Current and Previous FY only)
+  const financialYears = useMemo(() => {
+    const today = new Date();
+    const currentFyStartYear = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+    return Array.from({ length: 2 }, (_, i) => {
+      const startYear = currentFyStartYear - i;
+      const endYear = startYear + 1;
+      const shortEnd = String(endYear).slice(-2);
+      const prefix = i === 0 ? 'Current FY: ' : 'Previous FY: ';
+      return {
+        value: `fy_${startYear}_${endYear}`,
+        label: `${prefix}${startYear}-${shortEnd} (Apr - Mar)`,
+        startYear,
+        endYear,
+      };
+    });
+  }, []);
+
   const handlePresetRange = (preset: string) => {
     setPresetRange(preset);
     if (!preset) {
@@ -44,30 +62,46 @@ const DailySalesPage: React.FC = () => {
       return;
     }
 
+    // Financial year preset (e.g. fy_2026_2027)
+    if (preset.startsWith('fy_')) {
+      const parts = preset.split('_');
+      const startYear = parseInt(parts[1], 10);
+      const endYear = parseInt(parts[2], 10);
+      if (!isNaN(startYear) && !isNaN(endYear)) {
+        setStartDate(`${startYear}-04-01`);
+        setEndDate(`${endYear}-03-31`);
+        setPage(1);
+        return;
+      }
+    }
+
     const today = new Date();
     let start = new Date(today);
     let end = new Date(today);
 
     switch (preset) {
-      case 'weekly':
+      case 'weekly': {
         const day = today.getDay();
         const diff = today.getDate() - day + (day === 0 ? -6 : 1);
         start.setDate(diff);
         break;
+      }
       case 'monthly':
         start = new Date(today.getFullYear(), today.getMonth(), 1);
         end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         break;
-      case 'quarterly':
+      case 'quarterly': {
         const quarter = Math.floor(today.getMonth() / 3);
         start = new Date(today.getFullYear(), quarter * 3, 1);
         end = new Date(today.getFullYear(), quarter * 3 + 3, 0);
         break;
-      case 'half_yearly':
+      }
+      case 'half_yearly': {
         const half = Math.floor(today.getMonth() / 6);
         start = new Date(today.getFullYear(), half * 6, 1);
         end = new Date(today.getFullYear(), half * 6 + 6, 0);
         break;
+      }
       case 'yearly':
         start = new Date(today.getFullYear(), 0, 1);
         end = new Date(today.getFullYear(), 11, 31);
@@ -75,10 +109,10 @@ const DailySalesPage: React.FC = () => {
     }
 
     const formatDate = (date: Date) => {
-      // Local time formatted as YYYY-MM-DD
-      const offset = date.getTimezoneOffset() * 60000;
-      const localISOTime = (new Date(date.getTime() - offset)).toISOString().split('T')[0];
-      return localISOTime;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     };
 
     setStartDate(formatDate(start));
@@ -147,6 +181,19 @@ const DailySalesPage: React.FC = () => {
       currency: 'INR',
       maximumFractionDigits: 2
     }).format(amount);
+  };
+
+  const getPageNumbers = (current: number, total: number) => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+      return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
   };
 
   const handleExport = async () => {
@@ -255,14 +302,23 @@ const DailySalesPage: React.FC = () => {
                 <select
                   value={presetRange}
                   onChange={(e) => handlePresetRange(e.target.value)}
-                  className="w-40 px-3 py-2 bg-slate-50 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-56 px-3 py-2 bg-slate-50 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
                 >
                   <option value="">Custom Range</option>
-                  <option value="weekly">This Week</option>
-                  <option value="monthly">This Month</option>
-                  <option value="quarterly">This Quarter</option>
-                  <option value="half_yearly">This Half Year</option>
-                  <option value="yearly">This Year</option>
+                  <optgroup label="Standard Presets">
+                    <option value="weekly">This Week</option>
+                    <option value="monthly">This Month</option>
+                    <option value="quarterly">This Quarter</option>
+                    <option value="half_yearly">This Half Year</option>
+                    <option value="yearly">This Calendar Year (Jan - Dec)</option>
+                  </optgroup>
+                  <optgroup label="Financial Years (Apr - Mar)">
+                    {financialYears.map((fy) => (
+                      <option key={fy.value} value={fy.value}>
+                        {fy.label}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
 
                 <div className="z-10 relative">
@@ -507,13 +563,13 @@ const DailySalesPage: React.FC = () => {
 
             {/* Pagination Controls */}
             {pagination && pagination.total > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-8 border-t border-slate-100">
-                <div className="text-xs font-bold text-slate-500">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-8 pt-8 border-t border-slate-100">
+                <div className="text-xs font-bold text-slate-500 text-center md:text-left">
                   Showing <span className="text-slate-800">{Math.min(pagination.total, (page - 1) * perPage + 1)}</span> to{' '}
                   <span className="text-slate-800">{Math.min(pagination.total, page * perPage)}</span> of{' '}
                   <span className="text-slate-800">{pagination.total}</span> entries
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center justify-center gap-3">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-bold text-slate-400">Show:</span>
                     <select
@@ -526,31 +582,53 @@ const DailySalesPage: React.FC = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Previous Page"
+                      className="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
                     </button>
-                    {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setPage(p)}
-                        className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all ${
-                          page === p
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
+
+                    {/* Mobile: compact page indicator */}
+                    <div className="flex sm:hidden items-center px-3 py-1.5 text-xs font-black text-slate-700 bg-slate-50 rounded-lg">
+                      Page {page} of {pagination.last_page}
+                    </div>
+
+                    {/* Tablet/Desktop: smart windowed page numbers */}
+                    <div className="hidden sm:flex items-center gap-1">
+                      {getPageNumbers(page, pagination.last_page).map((item, index) => {
+                        if (item === '...') {
+                          return (
+                            <span key={`dots-${index}`} className="px-2 py-1 text-xs font-bold text-slate-400">
+                              ...
+                            </span>
+                          );
+                        }
+                        const pageNum = Number(item);
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setPage(pageNum)}
+                            className={`min-w-[32px] h-8 px-2.5 text-xs font-black rounded-lg transition-all flex items-center justify-center ${
+                              page === pageNum
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
                     <button
                       onClick={() => setPage((p) => Math.min(pagination.last_page, p + 1))}
                       disabled={page === pagination.last_page}
-                      className="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Next Page"
+                      className="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
                     </button>

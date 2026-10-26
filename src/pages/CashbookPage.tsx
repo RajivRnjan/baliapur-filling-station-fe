@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 
 import DateRangeDropdown from '../components/DateRangeDropdown';
@@ -33,6 +33,24 @@ const CashbookPage: React.FC = () => {
   const [presetRange, setPresetRange] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Indian Financial Year: April 1 to March 31 (Current and Previous FY only)
+  const financialYears = useMemo(() => {
+    const today = new Date();
+    const currentFyStartYear = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+    return Array.from({ length: 2 }, (_, i) => {
+      const startYear = currentFyStartYear - i;
+      const endYear = startYear + 1;
+      const shortEnd = String(endYear).slice(-2);
+      const prefix = i === 0 ? 'Current FY: ' : 'Previous FY: ';
+      return {
+        value: `fy_${startYear}_${endYear}`,
+        label: `${prefix}${startYear}-${shortEnd} (Apr - Mar)`,
+        startYear,
+        endYear,
+      };
+    });
+  }, []);
+
   const handlePresetRange = (preset: string) => {
     setPresetRange(preset);
     if (!preset) {
@@ -42,30 +60,45 @@ const CashbookPage: React.FC = () => {
       return;
     }
 
+    // Financial year preset (e.g. fy_2026_2027)
+    if (preset.startsWith('fy_')) {
+      const parts = preset.split('_');
+      const startYear = parseInt(parts[1], 10);
+      const endYear = parseInt(parts[2], 10);
+      if (!isNaN(startYear) && !isNaN(endYear)) {
+        setStartDate(`${startYear}-04-01`);
+        setEndDate(`${endYear}-03-31`);
+        return;
+      }
+    }
+
     const today = new Date();
     let start = new Date(today);
     let end = new Date(today);
 
     switch (preset) {
-      case 'weekly':
+      case 'weekly': {
         const day = today.getDay();
         const diff = today.getDate() - day + (day === 0 ? -6 : 1);
         start.setDate(diff);
         break;
+      }
       case 'monthly':
         start = new Date(today.getFullYear(), today.getMonth(), 1);
         end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         break;
-      case 'quarterly':
+      case 'quarterly': {
         const quarter = Math.floor(today.getMonth() / 3);
         start = new Date(today.getFullYear(), quarter * 3, 1);
         end = new Date(today.getFullYear(), quarter * 3 + 3, 0);
         break;
-      case 'half_yearly':
+      }
+      case 'half_yearly': {
         const half = Math.floor(today.getMonth() / 6);
         start = new Date(today.getFullYear(), half * 6, 1);
         end = new Date(today.getFullYear(), half * 6 + 6, 0);
         break;
+      }
       case 'yearly':
         start = new Date(today.getFullYear(), 0, 1);
         end = new Date(today.getFullYear(), 11, 31);
@@ -73,8 +106,10 @@ const CashbookPage: React.FC = () => {
     }
 
     const formatDate = (date: Date) => {
-      const offset = date.getTimezoneOffset() * 60000;
-      return (new Date(date.getTime() - offset)).toISOString().split('T')[0];
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     };
 
     setStartDate(formatDate(start));
@@ -293,11 +328,20 @@ const CashbookPage: React.FC = () => {
                 className="px-3 py-1.5 bg-slate-50 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all w-full sm:w-auto"
               >
                 <option value="">Custom Range</option>
-                <option value="weekly">This Week</option>
-                <option value="monthly">This Month</option>
-                <option value="quarterly">This Quarter</option>
-                <option value="half_yearly">This Half Year</option>
-                <option value="yearly">This Year</option>
+                <optgroup label="Standard Presets">
+                  <option value="weekly">This Week</option>
+                  <option value="monthly">This Month</option>
+                  <option value="quarterly">This Quarter</option>
+                  <option value="half_yearly">This Half Year</option>
+                  <option value="yearly">This Calendar Year (Jan - Dec)</option>
+                </optgroup>
+                <optgroup label="Financial Years (Apr - Mar)">
+                  {financialYears.map((fy) => (
+                    <option key={fy.value} value={fy.value}>
+                      {fy.label}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
               
               <div className="z-10 relative w-full sm:w-auto">
