@@ -111,7 +111,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }:
           </NavLink>
         )}
 
-        {!isAdmin && !isStaff && (
+        {!isStaff && (
           <NavLink
             to="/purchases"
             title="Purchases"
