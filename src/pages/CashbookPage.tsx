@@ -13,6 +13,7 @@ interface CashbookRecord {
   particulars: string;
   cash_amount: number;
   bank_amount: number;
+  coin?: number;
   remark?: string;
 }
 
@@ -129,6 +130,7 @@ const CashbookPage: React.FC = () => {
   const [formParticulars, setFormParticulars] = useState('');
   const [formCash, setFormCash] = useState<number | string>('');
   const [formBank, setFormBank] = useState<number | string>('');
+  const [formCoin, setFormCoin] = useState<number | string>('');
   const [formRemark, setFormRemark] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -200,6 +202,7 @@ const CashbookPage: React.FC = () => {
       setFormParticulars(record.particulars);
       setFormCash(record.cash_amount);
       setFormBank(record.bank_amount);
+      setFormCoin(record.coin ?? '');
       setFormRemark(record.remark || '');
     } else {
       setEditingRecord(null);
@@ -208,6 +211,7 @@ const CashbookPage: React.FC = () => {
       setFormParticulars('');
       setFormCash('');
       setFormBank('');
+      setFormCoin('');
       setFormRemark('');
     }
     setIsModalOpen(true);
@@ -223,6 +227,7 @@ const CashbookPage: React.FC = () => {
         particulars: formParticulars,
         cash_amount: Number(formCash) || 0,
         bank_amount: Number(formBank) || 0,
+        coin: Number(formCoin) || 0,
         remark: formRemark
       };
 
@@ -271,6 +276,7 @@ const CashbookPage: React.FC = () => {
       (record.particulars && record.particulars.toLowerCase().includes(term)) ||
       (record.cash_amount && String(record.cash_amount).includes(term)) ||
       (record.bank_amount && String(record.bank_amount).includes(term)) ||
+      (record.coin && String(record.coin).includes(term)) ||
       (record.remark && record.remark.toLowerCase().includes(term))
     );
   });
@@ -391,15 +397,16 @@ const CashbookPage: React.FC = () => {
                     <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Particulars</th>
                     <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Cash Amount</th>
                     <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Bank Amount</th>
+                    <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Coin</th>
                     <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Remark</th>
                     {isSuperAdmin && <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center">Action</th>}
                   </tr>
                 </thead>
                 <tbody className="text-sm font-medium text-slate-600">
                   {loading ? (
-                    <tr><td colSpan={6} className="py-8 text-center">Loading...</td></tr>
+                    <tr><td colSpan={isSuperAdmin ? 8 : 7} className="py-8 text-center">Loading...</td></tr>
                   ) : filteredRecords.length === 0 ? (
-                    <tr><td colSpan={6} className="py-8 text-center text-slate-400">No records found.</td></tr>
+                    <tr><td colSpan={isSuperAdmin ? 8 : 7} className="py-8 text-center text-slate-400">No records found.</td></tr>
                   ) : filteredRecords.map((record) => (
                     <tr key={record.id} className="border-b border-slate-50 hover:bg-slate-50">
                       <td className="py-4 px-4 font-bold text-slate-800">{record.date.split('T')[0].split('-').reverse().join('-')}</td>
@@ -411,6 +418,7 @@ const CashbookPage: React.FC = () => {
                       <td className="py-4 px-4">{record.particulars}</td>
                       <td className="py-4 px-4 text-right">{formatCurrency(record.cash_amount)}</td>
                       <td className="py-4 px-4 text-right">{formatCurrency(record.bank_amount)}</td>
+                      <td className="py-4 px-4 text-right font-medium text-slate-700">{formatCurrency(record.coin || 0)}</td>
                       <td className="py-4 px-4 text-slate-500">{record.remark || '-'}</td>
                       {isSuperAdmin && (
                         <td className="py-4 px-4 text-center">
@@ -458,6 +466,13 @@ const CashbookPage: React.FC = () => {
                           {formatCurrency(filterType === 'receipt' ? totals.receipts_bank : (filterType === 'payment' ? totals.payments_bank : totals.receipts_bank - totals.payments_bank))}
                         </div>
                       </td>
+                      <td className="py-4 px-4 text-right">
+                        <div className={`text-sm font-black ${
+                          (filterType === 'receipt' ? (totals.receipts_coin || 0) : (filterType === 'payment' ? (totals.payments_coin || 0) : (totals.receipts_coin || 0) - (totals.payments_coin || 0))) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                        }`}>
+                          {formatCurrency(filterType === 'receipt' ? (totals.receipts_coin || 0) : (filterType === 'payment' ? (totals.payments_coin || 0) : (totals.receipts_coin || 0) - (totals.payments_coin || 0)))}
+                        </div>
+                      </td>
                       <td className="py-4 px-4"></td>
                       {isSuperAdmin && <td></td>}
                     </tr>
@@ -503,7 +518,7 @@ const CashbookPage: React.FC = () => {
                   required
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cash Amount</label>
                   <input
@@ -522,6 +537,17 @@ const CashbookPage: React.FC = () => {
                     step="0.01"
                     value={formBank}
                     onChange={(e) => setFormBank(e.target.value)}
+                    onWheel={(e) => e.currentTarget.blur()}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm font-medium text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Coin Amount</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formCoin}
+                    onChange={(e) => setFormCoin(e.target.value)}
                     onWheel={(e) => e.currentTarget.blur()}
                     className="w-full px-4 py-2 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm font-medium text-slate-800"
                   />

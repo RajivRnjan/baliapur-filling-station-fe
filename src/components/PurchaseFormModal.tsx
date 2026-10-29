@@ -169,13 +169,13 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ isOpen, onClose, 
           </div>
 
           <div>
-            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Remarks (Optional)</label>
+            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Invoice Number (Optional)</label>
             <input
               type="text"
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-800 font-medium"
-              placeholder="Any additional notes..."
+              placeholder="Enter invoice number..."
             />
           </div>
 

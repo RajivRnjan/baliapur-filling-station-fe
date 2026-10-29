@@ -228,7 +228,7 @@ const PurchasesPage = () => {
                     <th className="pb-4 pt-2 text-xs font-black text-slate-400 uppercase tracking-widest text-right">HSD (L)</th>
                     <th className="pb-4 pt-2 text-xs font-black text-slate-400 uppercase tracking-widest text-right">XP (L)</th>
                     <th className="pb-4 pt-2 text-xs font-black text-slate-400 uppercase tracking-widest text-center">Is Opening</th>
-                    <th className="pb-4 pt-2 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Remarks</th>
+                    <th className="pb-4 pt-2 text-xs font-black text-slate-400 uppercase tracking-widest text-left">Invoice Number</th>
                     <th className="pb-4 pt-2 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Created At</th>
                     <th className="pb-4 pt-2 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Updated At</th>
                     <th className="pb-4 pt-2 text-xs font-black text-slate-400 uppercase tracking-widest text-right pr-4">Actions</th>

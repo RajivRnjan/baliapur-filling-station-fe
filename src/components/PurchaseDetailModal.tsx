@@ -50,7 +50,7 @@ const PurchaseDetailModal: React.FC<PurchaseDetailModalProps> = ({ isOpen, onClo
             )}
           </div>
           <div className="flex justify-between border-b border-slate-100 pb-2">
-            <span className="text-slate-500 font-medium">Remarks:</span>
+            <span className="text-slate-500 font-medium">Invoice Number:</span>
             <span className="text-slate-600 font-medium">{purchase.remarks || '-'}</span>
           </div>
           <div className="flex justify-between border-b border-slate-100 pb-2">
